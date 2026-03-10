@@ -628,16 +628,26 @@ onUnmounted(() => {
 }
 
 .piece-black {
-  color: #4a4a4a;
+  color: #111;
   text-shadow:
-    -1px -1px 0 #000,
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000,
-    -2px  0   0 #000,
-     2px  0   0 #000,
+    /* biała warstwa — wyodrębnia zarys figury */
+    -1px -1px 0 #fff,
+     1px -1px 0 #fff,
+    -1px  1px 0 #fff,
+     1px  1px 0 #fff,
+     0   -1px 0 #fff,
+     0    1px 0 #fff,
+    -1px  0   0 #fff,
+     1px  0   0 #fff,
+    /* czarne zewnętrzne obramowanie */
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
      0   -2px 0 #000,
-     0    2px 0 #000;
+     0    2px 0 #000,
+    -2px  0   0 #000,
+     2px  0   0 #000;
 }
 
 .chess-board.flipped .piece {
