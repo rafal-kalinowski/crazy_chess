@@ -59,7 +59,7 @@ const selectColor = (color: PlayerColor) => {
 
 <style scoped>
 .home {
-  max-width: 1000px;
+  max-width: 1300px;
   margin: 0 auto;
   padding: 1rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -145,11 +145,9 @@ const selectColor = (color: PlayerColor) => {
 }
 
 .chess-section {
-  display: flex;
-  justify-content: center;
   margin: 2rem 0;
   background: rgba(255, 255, 255, 0.95);
-  padding: 2rem;
+  padding: 1.5rem 2rem;
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }

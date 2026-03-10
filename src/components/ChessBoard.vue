@@ -1,26 +1,31 @@
 <template>
   <div class="chess-board-container">
-    <!-- Timer -->
-    <div class="timer-display">
-      <div class="timer white-timer" :class="{ active: currentPlayer === 'white' && gameStarted }">
-        <div class="timer-label">Białe</div>
-        <div class="timer-value" :class="{ warning: whiteTime < 60, danger: whiteTime < 30 }">
-          {{ formatTime(whiteTime) }}
-        </div>
-      </div>
-      <div class="timer black-timer" :class="{ active: currentPlayer === 'black' && gameStarted }">
-        <div class="timer-label">Czarne</div>
-        <div class="timer-value" :class="{ warning: blackTime < 60, danger: blackTime < 30 }">
-          {{ formatTime(blackTime) }}
-        </div>
-      </div>
-    </div>
-
     <div v-if="isComputerThinking" class="computer-thinking">
       <div class="thinking-spinner"></div>
       <span>Komputer myśli...</span>
     </div>
-    <div class="chess-board" :class="{ 'flipped': playerColor === 'black' }">
+
+    <div class="game-area">
+      <!-- Lewy panel: Białe -->
+      <div class="side-panel">
+        <div class="timer" :class="{ active: currentPlayer === 'white' && gameStarted }">
+          <div class="timer-label">♔ Białe</div>
+          <div class="timer-value" :class="{ warning: whiteTime < 60, danger: whiteTime < 30 }">
+            {{ formatTime(whiteTime) }}
+          </div>
+        </div>
+        <div class="captured-section">
+          <div class="captured-label">Zbite:</div>
+          <div class="captured-list">
+            <span v-for="(p, i) in capturedByWhite" :key="i" :class="['captured-piece', `piece-${p.color}`]">
+              {{ getPieceSymbol(p) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Szachownica -->
+      <div class="chess-board" :class="{ 'flipped': playerColor === 'black' }">
       <div
         v-for="(square, index) in boardSquares"
         :key="index"
@@ -60,6 +65,25 @@
         <div v-if="square.possibleMove && !square.piece" class="move-indicator"></div>
         <div v-if="square.possibleMove && square.piece" class="capture-indicator"></div>
       </div>
+      </div>
+
+      <!-- Prawy panel: Czarne -->
+      <div class="side-panel">
+        <div class="timer" :class="{ active: currentPlayer === 'black' && gameStarted }">
+          <div class="timer-label">♚ Czarne</div>
+          <div class="timer-value" :class="{ warning: blackTime < 60, danger: blackTime < 30 }">
+            {{ formatTime(blackTime) }}
+          </div>
+        </div>
+        <div class="captured-section">
+          <div class="captured-label">Zbite:</div>
+          <div class="captured-list">
+            <span v-for="(p, i) in capturedByBlack" :key="i" :class="['captured-piece', `piece-${p.color}`]">
+              {{ getPieceSymbol(p) }}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -80,6 +104,8 @@ const gameMode = ref<GameMode>('computer') // Domyślnie gra z komputerem
 const isComputerThinking = ref(false)
 const playerColor = ref<PlayerColor>('white') // Kolor gracza
 const gameOver = ref(false)
+const capturedByWhite = ref<ChessPiece[]>([])
+const capturedByBlack = ref<ChessPiece[]>([])
 const castlingRights = ref<CastlingRights>({
   whiteKingside: true,
   whiteQueenside: true,
@@ -154,6 +180,8 @@ const endGame = (winner: PlayerColor) => {
 const resetGame = () => {
   stopTimer()
   gameOver.value = false
+  capturedByWhite.value = []
+  capturedByBlack.value = []
   castlingRights.value = { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true }
   const squares = createBoard()
   boardSquares.value = setupInitialPosition(squares)
@@ -341,6 +369,12 @@ const makeMove = (fromSquare: Square, toSquare: Square) => {
   const toFile = toSquare.id.charCodeAt(0) - 'a'.charCodeAt(0)
   const isCastling = piece.type === 'king' && Math.abs(fromFile - toFile) === 2
 
+  // Zapisz zbitą bierkę
+  if (isCapture) {
+    if (piece.color === 'white') capturedByWhite.value.push(toSquare.piece!)
+    else capturedByBlack.value.push(toSquare.piece!)
+  }
+
   // Wykonaj ruch króla
   toSquare.piece = piece
   fromSquare.piece = null
@@ -460,12 +494,48 @@ onUnmounted(() => {
 
 <style scoped>
 .chess-board-container {
+  position: relative;
+}
+
+.game-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.side-panel {
+  width: 160px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 2rem;
-  position: relative;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.captured-section {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.captured-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.captured-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-height: 2rem;
+}
+
+.captured-piece {
+  font-size: 1.3rem;
+  line-height: 1;
 }
 
 .computer-thinking {
@@ -496,13 +566,6 @@ onUnmounted(() => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-.timer-display {
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 1rem;
-  justify-content: center;
 }
 
 .timer {
