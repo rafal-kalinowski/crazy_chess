@@ -607,7 +607,7 @@ onUnmounted(() => {
 }
 
 .piece {
-  font-size: 2.5rem;
+  font-size: 3rem;
   font-weight: bold;
   user-select: none;
   transition: transform 0.2s ease;
@@ -729,7 +729,7 @@ onUnmounted(() => {
   }
   
   .piece {
-    font-size: 1.8rem;
+    font-size: 2.16rem;
   }
 }
 </style>
