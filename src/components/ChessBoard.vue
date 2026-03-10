@@ -65,9 +65,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import type { ChessPiece, Square, PlayerColor, GameMode } from '../types'
 import { PIECE_SYMBOLS, FILES, RANKS, DEFAULT_TIME_CONTROL, COMPUTER_MOVE_DELAY } from '../constants'
+import { getLegalMoves } from '../chess'
 
 // Stan szachownicy
 const boardSquares = ref<Square[]>([])
@@ -239,184 +240,13 @@ const clearHighlights = () => {
   })
 }
 
-// Funkcja do walidacji możliwych ruchów
-const getPossibleMoves = (piece: ChessPiece, fromSquare: Square): string[] => {
-  const moves: string[] = []
-  const [file, rank] = fromSquare.id.split('')
-  const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0)
-  const rankIndex = parseInt(rank) - 1
-
-  switch (piece.type) {
-    case 'pawn':
-      const direction = piece.color === 'white' ? 1 : -1
-      const startRank = piece.color === 'white' ? 1 : 6
-      
-      // Ruch do przodu o jedno pole
-      const newRank = rankIndex + direction
-      if (newRank >= 0 && newRank < 8) {
-        const forwardSquare = String.fromCharCode(file.charCodeAt(0)) + (newRank + 1)
-        const forwardPiece = boardSquares.value.find(s => s.id === forwardSquare)?.piece
-        if (!forwardPiece) {
-          moves.push(forwardSquare)
-        }
-      }
-      
-      // Pierwszy ruch o dwa pola
-      if (rankIndex === startRank) {
-        const doubleMoveRank = rankIndex + (2 * direction)
-        if (doubleMoveRank >= 0 && doubleMoveRank < 8) {
-          const doubleMoveSquare = String.fromCharCode(file.charCodeAt(0)) + (doubleMoveRank + 1)
-          const doubleMovePiece = boardSquares.value.find(s => s.id === doubleMoveSquare)?.piece
-          if (!doubleMovePiece) {
-            moves.push(doubleMoveSquare)
-          }
-        }
-      }
-      
-      // Bicie na ukos
-      for (const fileOffset of [-1, 1]) {
-        const newFileIndex = fileIndex + fileOffset
-        if (newFileIndex >= 0 && newFileIndex < 8) {
-          const newFile = String.fromCharCode('a'.charCodeAt(0) + newFileIndex)
-          const newRank = rankIndex + direction
-          if (newRank >= 0 && newRank < 8) {
-            const captureSquare = newFile + (newRank + 1)
-            const capturePiece = boardSquares.value.find(s => s.id === captureSquare)?.piece
-            if (capturePiece && capturePiece.color !== piece.color) {
-              moves.push(captureSquare)
-            }
-          }
-        }
-      }
-      break
-
-    case 'rook':
-      // Ruchy poziome i pionowe
-      for (const [fileOffset, rankOffset] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
-        for (let i = 1; i < 8; i++) {
-          const newFileIndex = fileIndex + (fileOffset * i)
-          const newRankIndex = rankIndex + (rankOffset * i)
-          if (newFileIndex < 0 || newFileIndex >= 8 || newRankIndex < 0 || newRankIndex >= 8) break
-          
-          const newFile = String.fromCharCode('a'.charCodeAt(0) + newFileIndex)
-          const newRank = newRankIndex + 1
-          const targetSquare = newFile + newRank
-          const targetPiece = boardSquares.value.find(s => s.id === targetSquare)?.piece
-          
-          if (!targetPiece) {
-            moves.push(targetSquare)
-          } else {
-            if (targetPiece.color !== piece.color) {
-              moves.push(targetSquare)
-            }
-            break
-          }
-        }
-      }
-      break
-
-    case 'bishop':
-      // Ruchy na ukos
-      for (const [fileOffset, rankOffset] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-        for (let i = 1; i < 8; i++) {
-          const newFileIndex = fileIndex + (fileOffset * i)
-          const newRankIndex = rankIndex + (rankOffset * i)
-          if (newFileIndex < 0 || newFileIndex >= 8 || newRankIndex < 0 || newRankIndex >= 8) break
-          
-          const newFile = String.fromCharCode('a'.charCodeAt(0) + newFileIndex)
-          const newRank = newRankIndex + 1
-          const targetSquare = newFile + newRank
-          const targetPiece = boardSquares.value.find(s => s.id === targetSquare)?.piece
-          
-          if (!targetPiece) {
-            moves.push(targetSquare)
-          } else {
-            if (targetPiece.color !== piece.color) {
-              moves.push(targetSquare)
-            }
-            break
-          }
-        }
-      }
-      break
-
-    case 'queen':
-      // Kombinacja ruchów wieży i gońca
-      for (const [fileOffset, rankOffset] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-        for (let i = 1; i < 8; i++) {
-          const newFileIndex = fileIndex + (fileOffset * i)
-          const newRankIndex = rankIndex + (rankOffset * i)
-          if (newFileIndex < 0 || newFileIndex >= 8 || newRankIndex < 0 || newRankIndex >= 8) break
-          
-          const newFile = String.fromCharCode('a'.charCodeAt(0) + newFileIndex)
-          const newRank = newRankIndex + 1
-          const targetSquare = newFile + newRank
-          const targetPiece = boardSquares.value.find(s => s.id === targetSquare)?.piece
-          
-          if (!targetPiece) {
-            moves.push(targetSquare)
-          } else {
-            if (targetPiece.color !== piece.color) {
-              moves.push(targetSquare)
-            }
-            break
-          }
-        }
-      }
-      break
-
-    case 'king':
-      // Ruchy o jedno pole we wszystkich kierunkach
-      for (const [fileOffset, rankOffset] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-        const newFileIndex = fileIndex + fileOffset
-        const newRankIndex = rankIndex + rankOffset
-        if (newFileIndex >= 0 && newFileIndex < 8 && newRankIndex >= 0 && newRankIndex < 8) {
-          const newFile = String.fromCharCode('a'.charCodeAt(0) + newFileIndex)
-          const newRank = newRankIndex + 1
-          const targetSquare = newFile + newRank
-          const targetPiece = boardSquares.value.find(s => s.id === targetSquare)?.piece
-          
-          if (!targetPiece || targetPiece.color !== piece.color) {
-            moves.push(targetSquare)
-          }
-        }
-      }
-      break
-
-    case 'knight':
-      // Ruchy w kształcie L
-      const knightMoves = [[2, 1], [2, -1], [-2, 1], [-2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2]]
-      for (const [fileOffset, rankOffset] of knightMoves) {
-        const newFileIndex = fileIndex + fileOffset
-        const newRankIndex = rankIndex + rankOffset
-        if (newFileIndex >= 0 && newFileIndex < 8 && newRankIndex >= 0 && newRankIndex < 8) {
-          const newFile = String.fromCharCode('a'.charCodeAt(0) + newFileIndex)
-          const newRank = newRankIndex + 1
-          const targetSquare = newFile + newRank
-          const targetPiece = boardSquares.value.find(s => s.id === targetSquare)?.piece
-          
-          if (!targetPiece || targetPiece.color !== piece.color) {
-            moves.push(targetSquare)
-          }
-        }
-      }
-      break
-  }
-
-  return moves
-}
-
 // Funkcja do podświetlania możliwych ruchów
 const highlightPossibleMoves = (piece: ChessPiece, fromSquare: Square) => {
   clearHighlights()
   fromSquare.selected = true
-  
-  const possibleMoves = getPossibleMoves(piece, fromSquare)
-  possibleMoves.forEach(move => {
+  getLegalMoves(piece, fromSquare, boardSquares.value).forEach(move => {
     const square = boardSquares.value.find(s => s.id === move)
-    if (square) {
-      square.possibleMove = true
-    }
+    if (square) square.possibleMove = true
   })
 }
 
@@ -502,34 +332,26 @@ const makeComputerMove = () => {
   
   isComputerThinking.value = true
   
-  // Znajdź wszystkie bierki komputera (przeciwne do gracza)
   const computerColor = playerColor.value === 'white' ? 'black' : 'white'
-  const computerPieces: { square: Square; piece: ChessPiece }[] = []
+
+  // Zbierz wszystkie legalne ruchy komputera (ta sama logika co dla gracza)
+  const legalMoves: { from: Square; to: string }[] = []
   boardSquares.value.forEach(square => {
     if (square.piece && square.piece.color === computerColor) {
-      computerPieces.push({ square, piece: square.piece })
+      getLegalMoves(square.piece, square, boardSquares.value).forEach(to => {
+        legalMoves.push({ from: square, to })
+      })
     }
   })
-  
-  if (computerPieces.length === 0) {
-    isComputerThinking.value = false
-    return
-  }
-  
-  // Wybierz losową bierkę
-  const randomPiece = computerPieces[Math.floor(Math.random() * computerPieces.length)]
-  const possibleMoves = getPossibleMoves(randomPiece.piece, randomPiece.square)
-  
-  if (possibleMoves.length > 0) {
-    // Wybierz losowy ruch
-    const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)]
-    const targetSquare = boardSquares.value.find(s => s.id === randomMove)
-    
+
+  if (legalMoves.length > 0) {
+    const randomMove = legalMoves[Math.floor(Math.random() * legalMoves.length)]
+    const targetSquare = boardSquares.value.find(s => s.id === randomMove.to)
     if (targetSquare) {
-      makeMove(randomPiece.square, targetSquare)
+      makeMove(randomMove.from, targetSquare)
     }
   }
-  
+
   isComputerThinking.value = false
 }
 
