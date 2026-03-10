@@ -66,6 +66,28 @@ export const playCheck = () => {
   tone(ctx, t + 0.2, 900, 0.15, 0.4)
 }
 
+// Roszada — świst przesuwającej się wieży
+export const playCastling = () => {
+  const ctx = getCtx()
+  const t = ctx.currentTime
+
+  const osc = ctx.createOscillator()
+  const gainNode = ctx.createGain()
+
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(1400, t)
+  osc.frequency.exponentialRampToValueAtTime(180, t + 0.45)
+
+  gainNode.gain.setValueAtTime(0.001, t)
+  gainNode.gain.linearRampToValueAtTime(0.35, t + 0.05)
+  gainNode.gain.exponentialRampToValueAtTime(0.001, t + 0.45)
+
+  osc.connect(gainNode)
+  gainNode.connect(ctx.destination)
+  osc.start(t)
+  osc.stop(t + 0.45)
+}
+
 // Szach mat — dramatyczna opadająca sekwencja
 export const playCheckmate = () => {
   const ctx = getCtx()

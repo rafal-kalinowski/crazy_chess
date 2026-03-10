@@ -66,10 +66,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import type { ChessPiece, Square, PlayerColor, GameMode } from '../types'
+import type { ChessPiece, Square, PlayerColor, GameMode, CastlingRights } from '../types'
 import { PIECE_SYMBOLS, FILES, RANKS, DEFAULT_TIME_CONTROL, COMPUTER_MOVE_DELAY } from '../constants'
 import { getLegalMoves, isKingInCheck, hasAnyLegalMove } from '../chess'
-import { playMove, playCapture, playCheck, playCheckmate } from '../sounds'
+import { playMove, playCapture, playCheck, playCheckmate, playCastling } from '../sounds'
 
 // Stan szachownicy
 const boardSquares = ref<Square[]>([])
@@ -80,6 +80,12 @@ const gameMode = ref<GameMode>('computer') // Domyślnie gra z komputerem
 const isComputerThinking = ref(false)
 const playerColor = ref<PlayerColor>('white') // Kolor gracza
 const gameOver = ref(false)
+const castlingRights = ref<CastlingRights>({
+  whiteKingside: true,
+  whiteQueenside: true,
+  blackKingside: true,
+  blackQueenside: true,
+})
 
 // Timer
 const whiteTime = ref(DEFAULT_TIME_CONTROL)
@@ -148,6 +154,7 @@ const endGame = (winner: PlayerColor) => {
 const resetGame = () => {
   stopTimer()
   gameOver.value = false
+  castlingRights.value = { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true }
   const squares = createBoard()
   boardSquares.value = setupInitialPosition(squares)
   currentPlayer.value = 'white'
@@ -250,7 +257,7 @@ const clearHighlights = () => {
 const highlightPossibleMoves = (piece: ChessPiece, fromSquare: Square) => {
   clearHighlights()
   fromSquare.selected = true
-  getLegalMoves(piece, fromSquare, boardSquares.value).forEach(move => {
+  getLegalMoves(piece, fromSquare, boardSquares.value, castlingRights.value).forEach(move => {
     const square = boardSquares.value.find(s => s.id === move)
     if (square) square.possibleMove = true
   })
@@ -308,14 +315,49 @@ const handleDrop = (square: Square, event: DragEvent) => {
   makeMove(draggedFromSquare.value, square)
 }
 
+// Aktualizuje prawa do roszady po ruchu
+const updateCastlingRights = (piece: ChessPiece, fromId: string) => {
+  if (piece.type === 'king') {
+    if (piece.color === 'white') { castlingRights.value.whiteKingside = false; castlingRights.value.whiteQueenside = false }
+    else { castlingRights.value.blackKingside = false; castlingRights.value.blackQueenside = false }
+  }
+  if (piece.type === 'rook') {
+    if (fromId === 'h1') castlingRights.value.whiteKingside = false
+    if (fromId === 'a1') castlingRights.value.whiteQueenside = false
+    if (fromId === 'h8') castlingRights.value.blackKingside = false
+    if (fromId === 'a8') castlingRights.value.blackQueenside = false
+  }
+}
+
 // Funkcja do wykonania ruchu
 const makeMove = (fromSquare: Square, toSquare: Square) => {
   if (gameOver.value) return
 
+  const piece = fromSquare.piece!
   const isCapture = !!toSquare.piece
 
-  toSquare.piece = fromSquare.piece
+  // Wykryj roszadę: król przesuwa się o 2 pola w poziomie
+  const fromFile = fromSquare.id.charCodeAt(0) - 'a'.charCodeAt(0)
+  const toFile = toSquare.id.charCodeAt(0) - 'a'.charCodeAt(0)
+  const isCastling = piece.type === 'king' && Math.abs(fromFile - toFile) === 2
+
+  // Wykonaj ruch króla
+  toSquare.piece = piece
   fromSquare.piece = null
+
+  // Jeśli roszada — przesuń też wieżę
+  if (isCastling) {
+    const rank = fromSquare.id[1]
+    const kingside = toFile > fromFile
+    const rookFromId = kingside ? `h${rank}` : `a${rank}`
+    const rookToId = kingside ? `f${rank}` : `d${rank}`
+    const rookFrom = boardSquares.value.find(s => s.id === rookFromId)!
+    const rookTo = boardSquares.value.find(s => s.id === rookToId)!
+    rookTo.piece = rookFrom.piece
+    rookFrom.piece = null
+  }
+
+  updateCastlingRights(piece, fromSquare.id)
 
   if (!gameStarted.value) {
     gameStarted.value = true
@@ -327,13 +369,14 @@ const makeMove = (fromSquare: Square, toSquare: Square) => {
 
   const nextPlayer = currentPlayer.value
   const inCheck = isKingInCheck(nextPlayer, boardSquares.value)
-  const noMoves = !hasAnyLegalMove(nextPlayer, boardSquares.value)
+  const noMoves = !hasAnyLegalMove(nextPlayer, boardSquares.value, castlingRights.value)
 
   if (inCheck && noMoves) {
-    const winner: PlayerColor = nextPlayer === 'white' ? 'black' : 'white'
     playCheckmate()
-    endGame(winner)
+    endGame(nextPlayer === 'white' ? 'black' : 'white')
     return
+  } else if (isCastling) {
+    playCastling()
   } else if (inCheck) {
     playCheck()
   } else if (isCapture) {
@@ -359,7 +402,7 @@ const makeComputerMove = () => {
   const legalMoves: { from: Square; to: string }[] = []
   boardSquares.value.forEach(square => {
     if (square.piece && square.piece.color === computerColor) {
-      getLegalMoves(square.piece, square, boardSquares.value).forEach(to => {
+      getLegalMoves(square.piece, square, boardSquares.value, castlingRights.value).forEach(to => {
         legalMoves.push({ from: square, to })
       })
     }

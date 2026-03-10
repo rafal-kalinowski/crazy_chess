@@ -18,6 +18,13 @@ export interface Square {
 
 export type PlayerColor = 'white' | 'black'
 
+export interface CastlingRights {
+  whiteKingside: boolean
+  whiteQueenside: boolean
+  blackKingside: boolean
+  blackQueenside: boolean
+}
+
 export type GameMode = 'human' | 'computer'
 
 export interface GameState {

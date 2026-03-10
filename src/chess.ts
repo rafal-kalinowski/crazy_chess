@@ -1,4 +1,4 @@
-import type { ChessPiece, Square, PlayerColor } from './types'
+import type { ChessPiece, Square, PlayerColor, CastlingRights } from './types'
 
 export const getPossibleMoves = (piece: ChessPiece, fromSquare: Square, squares: Square[]): string[] => {
   const moves: string[] = []
@@ -156,17 +156,63 @@ export const isKingInCheck = (color: PlayerColor, squares: Square[]): boolean =>
   })
 }
 
-// Zwraca tylko legalne ruchy — niezostawiające własnego króla w szachu
-export const getLegalMoves = (piece: ChessPiece, fromSquare: Square, squares: Square[]): string[] => {
-  return getPossibleMoves(piece, fromSquare, squares).filter(to => {
+// Zwraca dozwolone ruchy roszady dla króla (pola docelowe króla)
+export const getCastlingMoves = (color: PlayerColor, squares: Square[], rights: CastlingRights): string[] => {
+  const moves: string[] = []
+  const rank = color === 'white' ? '1' : '8'
+  const kingSquare = squares.find(s => s.id === `e${rank}`)
+
+  if (!kingSquare?.piece || kingSquare.piece.type !== 'king' || kingSquare.piece.color !== color) return moves
+  if (isKingInCheck(color, squares)) return moves
+
+  const kingsideRight = color === 'white' ? rights.whiteKingside : rights.blackKingside
+  const queensideRight = color === 'white' ? rights.whiteQueenside : rights.blackQueenside
+
+  if (kingsideRight) {
+    const f = squares.find(s => s.id === `f${rank}`)
+    const g = squares.find(s => s.id === `g${rank}`)
+    const h = squares.find(s => s.id === `h${rank}`)
+    if (!f?.piece && !g?.piece && h?.piece?.type === 'rook' && h.piece.color === color) {
+      const throughF = simulateMove(squares, kingSquare, `f${rank}`)
+      const throughG = simulateMove(squares, kingSquare, `g${rank}`)
+      if (!isKingInCheck(color, throughF) && !isKingInCheck(color, throughG)) {
+        moves.push(`g${rank}`)
+      }
+    }
+  }
+
+  if (queensideRight) {
+    const b = squares.find(s => s.id === `b${rank}`)
+    const c = squares.find(s => s.id === `c${rank}`)
+    const d = squares.find(s => s.id === `d${rank}`)
+    const a = squares.find(s => s.id === `a${rank}`)
+    if (!b?.piece && !c?.piece && !d?.piece && a?.piece?.type === 'rook' && a.piece.color === color) {
+      const throughD = simulateMove(squares, kingSquare, `d${rank}`)
+      const throughC = simulateMove(squares, kingSquare, `c${rank}`)
+      if (!isKingInCheck(color, throughD) && !isKingInCheck(color, throughC)) {
+        moves.push(`c${rank}`)
+      }
+    }
+  }
+
+  return moves
+}
+
+// Zwraca tylko legalne ruchy — niezostawiające własnego króla w szachu (+ roszada)
+export const getLegalMoves = (piece: ChessPiece, fromSquare: Square, squares: Square[], rights?: CastlingRights): string[] => {
+  const moves = getPossibleMoves(piece, fromSquare, squares).filter(to => {
     return !isKingInCheck(piece.color, simulateMove(squares, fromSquare, to))
   })
+  if (piece.type === 'king' && rights) {
+    moves.push(...getCastlingMoves(piece.color, squares, rights))
+  }
+  return moves
 }
 
 // Sprawdza czy gracz ma jakikolwiek legalny ruch
-export const hasAnyLegalMove = (color: PlayerColor, squares: Square[]): boolean => {
+export const hasAnyLegalMove = (color: PlayerColor, squares: Square[], rights?: CastlingRights): boolean => {
   return squares.some(s => {
     if (!s.piece || s.piece.color !== color) return false
-    return getLegalMoves(s.piece, s, squares).length > 0
+    return getLegalMoves(s.piece, s, squares, rights).length > 0
   })
 }
