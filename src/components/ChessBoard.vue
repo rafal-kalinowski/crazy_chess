@@ -573,6 +573,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .square.light {
@@ -664,12 +665,12 @@ onUnmounted(() => {
 
 .piece.dragging {
   opacity: 0.5;
-  transform: scale(1.2);
+  transform: scale(1.0);
   z-index: 1000;
 }
 
 .chess-board.flipped .piece.dragging {
-  transform: rotate(180deg) scale(1.2);
+  transform: rotate(180deg) scale(1.0);
 }
 
 .move-indicator {
