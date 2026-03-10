@@ -116,7 +116,7 @@ const gameStarted = ref(false)
 // Ścieżka do obrazka bierki z katalogu public/pieces
 const getPieceImage = (piece: ChessPiece): string => {
   const prefix = piece.color === 'white' ? 'w' : 'b'
-  return `/pieces/${prefix}_${piece.type}_png_128px.png`
+  return `/pieces/${prefix}_${piece.type}_png_shadow_128px.png`
 }
 
 // Funkcje timera
