@@ -17,9 +17,7 @@
         <div class="captured-section">
           <div class="captured-label">Zbite:</div>
           <div class="captured-list">
-            <span v-for="(p, i) in capturedByWhite" :key="i" :class="['captured-piece', `piece-${p.color}`]">
-              {{ getPieceSymbol(p) }}
-            </span>
+            <img v-for="(p, i) in capturedByWhite" :key="i" :src="getPieceImage(p)" :alt="p.type" class="captured-piece-img" />
           </div>
         </div>
       </div>
@@ -48,15 +46,12 @@
         <div
           v-if="square.piece"
           class="piece"
-          :class="[
-            `piece-${square.piece.color}`,
-            { 'dragging': square.piece === draggedPiece }
-          ]"
+          :class="{ 'dragging': square.piece === draggedPiece }"
           :draggable="true"
           @dragstart="handleDragStart(square, $event)"
           @dragend="handleDragEnd"
         >
-          {{ getPieceSymbol(square.piece) }}
+          <img :src="getPieceImage(square.piece)" :alt="square.piece.type" class="piece-img" />
         </div>
         <div v-if="square.coordinate" class="coordinate">
           {{ square.coordinate }}
@@ -78,9 +73,7 @@
         <div class="captured-section">
           <div class="captured-label">Zbite:</div>
           <div class="captured-list">
-            <span v-for="(p, i) in capturedByBlack" :key="i" :class="['captured-piece', `piece-${p.color}`]">
-              {{ getPieceSymbol(p) }}
-            </span>
+            <img v-for="(p, i) in capturedByBlack" :key="i" :src="getPieceImage(p)" :alt="p.type" class="captured-piece-img" />
           </div>
         </div>
       </div>
@@ -91,7 +84,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { ChessPiece, Square, PlayerColor, GameMode, CastlingRights } from '../types'
-import { PIECE_SYMBOLS, FILES, RANKS, DEFAULT_TIME_CONTROL, COMPUTER_MOVE_DELAY } from '../constants'
+import { FILES, RANKS, DEFAULT_TIME_CONTROL, COMPUTER_MOVE_DELAY } from '../constants'
 import { getLegalMoves, isKingInCheck, hasAnyLegalMove } from '../chess'
 import { playMove, playCapture, playCheck, playCheckmate, playCastling } from '../sounds'
 
@@ -120,11 +113,10 @@ const timerInterval = ref<number | null>(null)
 const gameStarted = ref(false)
 
 // Symbole bierek w stylu chess.com
-const pieceSymbols = PIECE_SYMBOLS
-
-// Funkcja do pobierania symbolu bierki
-const getPieceSymbol = (piece: ChessPiece): string => {
-  return pieceSymbols[piece.color][piece.type]
+// Ścieżka do obrazka bierki z katalogu public/pieces
+const getPieceImage = (piece: ChessPiece): string => {
+  const prefix = piece.color === 'white' ? 'w' : 'b'
+  return `/pieces/${prefix}_${piece.type}_png_128px.png`
 }
 
 // Funkcje timera
@@ -533,10 +525,7 @@ onUnmounted(() => {
   min-height: 2rem;
 }
 
-.captured-piece {
-  font-size: 1.3rem;
-  line-height: 1;
-}
+
 
 .computer-thinking {
   position: absolute;
@@ -671,47 +660,29 @@ onUnmounted(() => {
 }
 
 .piece {
-  font-size: 3rem;
-  font-weight: bold;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   user-select: none;
   transition: transform 0.2s ease;
-  line-height: 1;
+  cursor: grab;
 }
 
-.piece-white {
-  color: #ffffff;
-  text-shadow:
-    -1px -1px 0 #000,
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000,
-    -2px  0   0 #000,
-     2px  0   0 #000,
-     0   -2px 0 #000,
-     0    2px 0 #000;
+.piece-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.piece-black {
-  color: #111;
-  text-shadow:
-    /* biała warstwa — wyodrębnia zarys figury */
-    -1px -1px 0 #fff,
-     1px -1px 0 #fff,
-    -1px  1px 0 #fff,
-     1px  1px 0 #fff,
-     0   -1px 0 #fff,
-     0    1px 0 #fff,
-    -1px  0   0 #fff,
-     1px  0   0 #fff,
-    /* czarne zewnętrzne obramowanie */
-    -2px -2px 0 #000,
-     2px -2px 0 #000,
-    -2px  2px 0 #000,
-     2px  2px 0 #000,
-     0   -2px 0 #000,
-     0    2px 0 #000,
-    -2px  0   0 #000,
-     2px  0   0 #000;
+.captured-piece-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .chess-board.flipped .piece {
@@ -793,7 +764,13 @@ onUnmounted(() => {
   }
   
   .piece {
-    font-size: 2.16rem;
+    width: 36px;
+    height: 36px;
+  }
+
+  .captured-piece-img {
+    width: 20px;
+    height: 20px;
   }
 }
 </style>
