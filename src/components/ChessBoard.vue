@@ -40,11 +40,11 @@
         @dragleave.prevent="handleDragLeave(square, $event)"
         @drop.prevent="handleDrop(square, $event)"
       >
-        <div 
-          v-if="square.piece" 
-          class="piece" 
+        <div
+          v-if="square.piece"
+          class="piece"
           :class="[
-            square.piece,
+            `piece-${square.piece.color}`,
             { 'dragging': square.piece === draggedPiece }
           ]"
           :draggable="true"
@@ -566,9 +566,35 @@ onUnmounted(() => {
 .piece {
   font-size: 2.5rem;
   font-weight: bold;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
   user-select: none;
   transition: transform 0.2s ease;
+  line-height: 1;
+}
+
+.piece-white {
+  color: #ffffff;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000,
+    -2px  0   0 #000,
+     2px  0   0 #000,
+     0   -2px 0 #000,
+     0    2px 0 #000;
+}
+
+.piece-black {
+  color: #4a4a4a;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000,
+    -2px  0   0 #000,
+     2px  0   0 #000,
+     0   -2px 0 #000,
+     0    2px 0 #000;
 }
 
 .chess-board.flipped .piece {
