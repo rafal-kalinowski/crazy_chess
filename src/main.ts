@@ -6,9 +6,11 @@ import App from './App.vue'
 
 // Import your routes
 import Home from './views/Home.vue'
+import Rules from './views/Rules.vue'
 
 const routes = [
   { path: '/', name: 'Home', component: Home },
+  { path: '/rules', name: 'Rules', component: Rules },
 ]
 
 const router = createRouter({

@@ -6,10 +6,12 @@
   <div id="app">
     <nav class="navbar">
       <div class="nav-brand">
-        <h2>Crazy Chess</h2>
+        <h2>♔ Crazy Chess</h2>
       </div>
       <div class="nav-links">
-        <router-link to="/" class="nav-link">Home</router-link>
+        <router-link to="/" class="nav-link">Gra</router-link>
+        <router-link to="/rules" class="nav-link">Zasady</router-link>
+        <a href="#" class="nav-link">O grze</a>
       </div>
     </nav>
     
