@@ -162,3 +162,11 @@ export const getLegalMoves = (piece: ChessPiece, fromSquare: Square, squares: Sq
     return !isKingInCheck(piece.color, simulateMove(squares, fromSquare, to))
   })
 }
+
+// Sprawdza czy gracz ma jakikolwiek legalny ruch
+export const hasAnyLegalMove = (color: PlayerColor, squares: Square[]): boolean => {
+  return squares.some(s => {
+    if (!s.piece || s.piece.color !== color) return false
+    return getLegalMoves(s.piece, s, squares).length > 0
+  })
+}

@@ -68,7 +68,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { ChessPiece, Square, PlayerColor, GameMode } from '../types'
 import { PIECE_SYMBOLS, FILES, RANKS, DEFAULT_TIME_CONTROL, COMPUTER_MOVE_DELAY } from '../constants'
-import { getLegalMoves } from '../chess'
+import { getLegalMoves, isKingInCheck, hasAnyLegalMove } from '../chess'
+import { playMove, playCapture, playCheck, playCheckmate } from '../sounds'
 
 // Stan szachownicy
 const boardSquares = ref<Square[]>([])
@@ -78,6 +79,7 @@ const currentPlayer = ref<PlayerColor>('white')
 const gameMode = ref<GameMode>('computer') // Domyślnie gra z komputerem
 const isComputerThinking = ref(false)
 const playerColor = ref<PlayerColor>('white') // Kolor gracza
+const gameOver = ref(false)
 
 // Timer
 const whiteTime = ref(DEFAULT_TIME_CONTROL)
@@ -136,12 +138,16 @@ const formatTime = (seconds: number): string => {
 
 const endGame = (winner: PlayerColor) => {
   stopTimer()
-  alert(`Gra zakończona! Wygrały ${winner === 'white' ? 'białe' : 'czarne'}!`)
+  gameOver.value = true
+  setTimeout(() => {
+    alert(`Gra zakończona! Wygrały ${winner === 'white' ? 'białe' : 'czarne'}!`)
+  }, 1500)
 }
 
 // Funkcja do resetowania gry
 const resetGame = () => {
   stopTimer()
+  gameOver.value = false
   const squares = createBoard()
   boardSquares.value = setupInitialPosition(squares)
   currentPlayer.value = 'white'
@@ -252,8 +258,7 @@ const highlightPossibleMoves = (piece: ChessPiece, fromSquare: Square) => {
 
 // Funkcje obsługi drag & drop
 const handleDragStart = (square: Square, event: DragEvent) => {
-  // Jeśli gra z komputerem i nie jest ruch gracza, zablokuj
-  if (gameMode.value === 'computer' && currentPlayer.value !== playerColor.value) {
+  if (gameOver.value || (gameMode.value === 'computer' && currentPlayer.value !== playerColor.value)) {
     event.preventDefault()
     return
   }
@@ -305,24 +310,40 @@ const handleDrop = (square: Square, event: DragEvent) => {
 
 // Funkcja do wykonania ruchu
 const makeMove = (fromSquare: Square, toSquare: Square) => {
+  if (gameOver.value) return
+
+  const isCapture = !!toSquare.piece
+
   toSquare.piece = fromSquare.piece
   fromSquare.piece = null
-  
-  // Uruchom timer przy pierwszym ruchu
+
   if (!gameStarted.value) {
     gameStarted.value = true
     startTimer()
   }
-  
+
   currentPlayer.value = currentPlayer.value === 'white' ? 'black' : 'white'
   clearHighlights()
-  console.log(`Ruch: ${fromSquare.id} -> ${toSquare.id}`)
-  
-  // Jeśli gra z komputerem i teraz ruch komputera
+
+  const nextPlayer = currentPlayer.value
+  const inCheck = isKingInCheck(nextPlayer, boardSquares.value)
+  const noMoves = !hasAnyLegalMove(nextPlayer, boardSquares.value)
+
+  if (inCheck && noMoves) {
+    const winner: PlayerColor = nextPlayer === 'white' ? 'black' : 'white'
+    playCheckmate()
+    endGame(winner)
+    return
+  } else if (inCheck) {
+    playCheck()
+  } else if (isCapture) {
+    playCapture()
+  } else {
+    playMove()
+  }
+
   if (gameMode.value === 'computer' && currentPlayer.value !== playerColor.value) {
-    setTimeout(() => {
-      makeComputerMove()
-    }, COMPUTER_MOVE_DELAY) // Małe opóźnienie dla efektu wizualnego
+    setTimeout(makeComputerMove, COMPUTER_MOVE_DELAY)
   }
 }
 
@@ -357,10 +378,8 @@ const makeComputerMove = () => {
 
 // Funkcja obsługi kliknięcia na pole
 const handleSquareClick = (square: Square) => {
-  // Jeśli gra z komputerem i nie jest ruch gracza, zablokuj
-  if (gameMode.value === 'computer' && currentPlayer.value !== playerColor.value) {
-    return
-  }
+  if (gameOver.value) return
+  if (gameMode.value === 'computer' && currentPlayer.value !== playerColor.value) return
   
   if (square.piece && square.piece.color === currentPlayer.value) {
     highlightPossibleMoves(square.piece, square)
